@@ -1,0 +1,560 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- saved from url=(0031)http://192.139.20.2/WebChatASP/ -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>
+	CC Elite MultiChannel Web Chat Example
+</title><link href="./CC Elite MultiChannel Web Chat Example_files/default.css" rel="stylesheet" type="text/css">
+	
+    <script type="text/javascript">
+    
+    //icons
+    var onlineIcon = "Images/ChatOnline.jpg";
+    var awayIcon = "Images/ChatAway.jpg";
+    var initIcon = "Images/ChatInit.jpg";
+    var offlineIcon = "Images/ChatOffline.jpg";
+    
+    var elapse = 1000;	// this is default interval - 1000 millisecond 
+	var timer = null;
+	var conversationPopUp = null;
+	var xmlDoc = null;
+	var needToClosePopup = false;
+	
+	var timeOptions = {
+    hour: '2-digit',
+    minute:'2-digit',
+    };
+	
+	var locale=navigator.language?navigator.language:navigator['userLanguage'];
+		
+    function UpdateForm (result)
+    {
+    	try
+		{
+			if(conversationPopUp != null)
+			{
+				var mimeType = "text/plain";
+				conversationPopUp.window.loadScreenFromXml(result, mimeType);
+			}
+			loadScreenFromXml(result);
+		}
+		catch (error) {}
+    }
+    
+    function ChangeService()
+    {
+        document.getElementById("ServiceStatus").innerHTML = '';
+        document.getElementById("UserMessages").innerHTML = 'Please wait...';
+        changeStatusIcon(initIcon);
+        PageMethods.changeService(getSelectedService(), UpdateForm);
+    }
+    
+	function onTimer()
+	{
+		try
+		{
+		    PageMethods.updateStatus(UpdateForm);
+			timer = window.setTimeout("onTimer()", elapse);
+		    //To update local time
+		    var localeTime = removeSeconds();
+		    document.getElementById("hdnLocalTime").value = localeTime;
+		}
+		catch(error)
+		{
+			try
+			{
+			    writeDebugMessage(error)
+			}
+			catch(error1) {}
+			timer = window.setTimeout("onTimer()", tick);
+		}
+	}
+
+	function removeSeconds() 
+	{
+	    var date = new Date();
+	    var localeSpecificTime = date.toLocaleTimeString(locale, timeOptions);
+	    return localeSpecificTime;
+	}
+	
+	function getSelectedService()
+	{
+	    try
+	    {
+	        var deps = document.getElementById("ddlServices");
+		    return deps.options[deps.selectedIndex].value;
+		}
+		catch(err)
+		{
+		}
+	}
+	
+	function getSelectedServiceName()
+	{
+	    try
+	    {
+	        var deps = document.getElementById("ddlServices");
+		    return deps.options[deps.selectedIndex].innerHTML;
+		}
+		catch(err)
+		{
+		}
+	}
+	
+    
+    function CreateConversation()
+    {
+        if(checkUserName() == false)
+            return;
+        
+        document.getElementById("StartButton").disabled = true;
+        conversationPopUp = window.open("Conversation.aspx", "", "height=600,width=400,status=no,resizable=yes,scrollbars=no,toolbar=no,menubar=no");
+		
+        if(conversationPopUp)
+        {
+			document.getElementById("ddlServices").disabled = true;
+            //popups allowed hide popup error message
+            document.getElementById('lblErrorMessage').style.display = "none";
+        }
+        else
+        {
+            //popups blocked display popup error message
+            document.getElementById('lblErrorMessage').style.display = "";
+            document.getElementById('lblErrorMessage').innerHTML = 'You have a popup blocker enabled. To use live support please allow popups for this site.';
+        }
+    }
+    
+    function formatXmlElement(label, text)
+    {
+		text = text.replace(/&/g, "&amp;");
+		text = text.replace(/</g, "&lt;");
+		text = text.replace(/>/g, "&gt;");
+		
+		var ssnData = '<' + label + '>';
+		ssnData = ssnData + text;
+		ssnData = ssnData + '</' + label + '>';
+		
+		return ssnData;
+    }
+    
+    function addSessionData(initialQuestion)
+    {
+		var ssnData = initialQuestion;
+    
+		try
+		{
+			ssnData = '<?xml version="1.0" encoding="utf-8" ?>';
+			ssnData = ssnData + '<WebChatWebSite>';
+			
+			// -----------------------------------------------------------
+			// this is compulsory parameter used by a web chat gateway
+			ssnData = ssnData + formatXmlElement("InitialQuestion", initialQuestion);
+			// -----------------------------------------------------------
+			
+			// -----------------------------------------------------------
+			// this is optional parameter used by a web chat gateway
+			var q3 = "text/plain";
+			ssnData = ssnData + formatXmlElement("MimeType", q3);
+			// -----------------------------------------------------------
+			
+			// -----------------------------------------------------------
+			// Those parameters are optional
+			// They are not used by a web chat gateway but passed on to the SMMS 
+			// and written to ASMediaStoreDatabase as Associated Data / Extra Data
+			// Add more customer data here
+			// format: <paramName>Param Value - No <,>,& allowed </paramName>
+			var q = "10.242.138.212";
+			ssnData = ssnData + formatXmlElement("UserIPAddress", q);
+			
+			var q1 = "Chrome";
+			ssnData = ssnData + formatXmlElement("UserBrowserName", q1);
+			
+			var q2 = "59.0";
+			ssnData = ssnData + formatXmlElement("UserBrowserVersion", q2);
+			// -----------------------------------------------------------
+			
+			ssnData = ssnData + '</WebChatWebSite>';
+			
+			//alert("SSN Data: " + ssnData);
+		}
+		catch(error)
+		{
+			//alert("Error: " + error);
+		}
+		
+		return ssnData;
+	}
+    
+    function startChatSession(initialQuestion)
+    {
+		var ssnData = initialQuestion;
+		
+		ssnData = addSessionData(initialQuestion)
+    
+        if(conversationPopUp)
+        {
+			var maxSize = "1024";
+			var intMaxSize = 1;
+			try 
+			{ 
+				intMaxSize = parseInt(maxSize); 
+			} 
+			catch(err)
+			{
+				alert("parseMaxSize Error: " + err);
+			} 
+			//alert("Max Size = " + intMaxSize);		
+			conversationPopUp.window.setMaxMessageSize(intMaxSize);
+			
+			var serviceID = getSelectedService();
+			var cid = "en-US";
+			var uname = document.getElementById("txtName").value;
+			
+			//todo callserver startconv
+			try
+			{
+				PageMethods.startChatSession(serviceID, uname, initialQuestion, ssnData, UpdateForm);
+				
+			}
+			catch(error)
+			{
+				alarm("Error in PageMethods.startChatSession:\r\n" + error);
+			}
+        }
+        else
+        {
+            //popups blocked display popup error message
+            document.getElementById('lblErrorMessage').style.display = "";
+            document.getElementById('lblErrorMessage').innerHTML = 'You have a popup blocker enabled. To use live support please allow popups for this site.';
+        }
+    }
+	
+	function checkUserName()
+	{
+		var uname = document.getElementById("txtName").value;
+		if(uname.length > 0)
+		{
+	        document.getElementById('lblErrorMessage').style.display = "none";
+			return true;
+		}
+		else
+		{
+            document.getElementById('lblErrorMessage').style.display = "";
+            document.getElementById('lblErrorMessage').innerHTML = 'Please enter a user name.';
+            return false;
+		}
+	}	
+	
+	function send(msg)
+	{
+		try
+		{
+			PageMethods.sendMessage(msg, UpdateForm);
+		}
+		catch(error)
+		{
+			alarm("Error in PageMethods.sendMessage:\r\n" + error);
+		}
+	}		
+
+	function sendTypingNotification(notificationCode) 
+	{
+	    var userName = document.getElementById("txtName").value;
+        PageMethods.sendNotification(notificationCode, userName);
+	}
+	
+	function finish()
+	{
+	    PageMethods.closeSession(UpdateForm);
+	}	
+
+	function loadScreenFromXml(xmlStr)
+	{
+        // code for IE
+        if (window.ActiveXObject)
+        {
+            xmlDoc=new ActiveXObject("Microsoft.XMLDOM");
+            xmlDoc.async="false";
+            xmlDoc.loadXML(xmlStr);
+        }
+        // code for Mozilla browsers
+        else
+        {
+            var parser=new DOMParser();
+            xmlDoc=parser.parseFromString(xmlStr,"text/xml");
+        }
+		
+		var serviceID = getSelectedServiceName();
+		var usrMsg = getXMLElement("USERMESSAGE");
+		var wcStat = getXMLElement("WCSTATUS");
+		var errorMessage = getXMLElement("ERRORMESSAGE");
+		var statusMessage = getXMLElement("STATUSMESSAGE");
+		var clock = getXMLElement("CLOCK");
+		
+		document.getElementById("ServiceStatus").innerHTML = 
+			"<span class='statuslabel'>" + serviceID + ": " + "</span>" + 
+			"<span class='statusline'>" + statusMessage + "</span>";
+		document.getElementById("UserMessages").innerHTML = usrMsg;
+		document.getElementById("clock").innerHTML = clock;
+		writeDebugMessage(errorMessage);
+		
+		document.getElementById("StartButton").disabled = true;
+		setStatus(wcStat);
+	}
+	
+	function writeDebugMessage(message)
+	{
+	    var debugMessages = document.getElementById("debugMessages");
+	    if(debugMessages)
+	    {
+	        debugMessages.innerHTML = message;
+	    }
+	}
+	
+	function getXMLElement(elementName)
+	{
+	    try
+		{
+			return xmlDoc.getElementsByTagName(elementName)[0].firstChild.nodeValue;
+		}
+		catch(error)
+		{
+		    return "";
+		}
+	}
+	
+	function setStatus(wcStat)
+	{
+	    if(wcStat == "Ready")
+		{
+			if(document.getElementById("txtName").value.length > 0)
+			{
+			    //only enable start button if status is ready and user has entered a name
+				document.getElementById("StartButton").disabled = false;
+			}
+			document.getElementById("ddlServices").disabled = false;
+			changeStatusIcon(onlineIcon);
+			
+		}
+		else if(wcStat == "RequestingConversation" || wcStat == "ConversationOpened" || wcStat == "ConversationClosed")
+		{
+			changeStatusIcon(onlineIcon);
+		}
+		else if(wcStat == "Away" || wcStat == "OutOfHours")
+		{
+			changeStatusIcon(awayIcon);
+		}
+		else if(wcStat == "NotAvailable" || wcStat == "Offline")
+		{
+			changeStatusIcon(offlineIcon);
+		}
+		else
+		{
+			changeStatusIcon(offlineIcon);
+		}
+	}
+	
+	function changeStatusIcon(url)
+	{
+		var statusIcon = document.getElementById("StatusIcon");
+		statusIcon.src = url;
+		statusIcon.style.display = "";
+	}
+	
+	function onconvclosed()
+	{
+		document.getElementById("ddlServices").disabled = false;
+	    self.focus();
+	    document.getElementById("txtName").focus();
+	    finish();
+	    document.getElementById("UserMessages").innerHTML = 'Closing conversation...';
+		if(needToClosePopup)
+		{
+			if(conversationPopUp && !conversationPopUp.closed)
+			{
+				// Closing popup - no question asked
+				conversationPopUp.window.enableConfirmationOnExit(false);
+				conversationPopUp.close();
+			}
+			needToClosePopup = false;
+	    }
+	    conversationPopUp = null;
+	}
+	
+	function onPageLoad()
+	{
+	    var debugMessages = document.getElementById("debugMessages");
+	    if(!debugMessages)
+	    {
+	        PageMethods.disableDebugMessages();
+        }
+		try
+		{
+			var pollInterval = "5";
+			var polIntervalSec = 1;
+			try 
+			{ 
+				polIntervalSec = parseInt(pollInterval); 
+			} 
+			catch(err)
+			{
+				alert("On Page Load(string2int): " + err);
+			} 
+			elapse = polIntervalSec*1000;
+			document.getElementById("UserMessages").innerHTML = 'Please wait...';
+			document.getElementById("txtName").focus();
+			
+			if(conversationPopUp != null)
+			{
+				conversationPopUp.window.enableConfirmationOnExit(true);
+			}
+		}
+		catch(error)
+		{
+			alert('' + error);
+		}
+		
+		onTimer();
+	}
+
+    function confirmExit()
+    {
+        if(conversationPopUp && !conversationPopUp.closed)
+		{
+			// Closing/refreshing the main page and interaction is in progress:
+			// need to close popup 
+			// Setting the flag to avoid looping (Mozilla)
+			needToClosePopup = true;
+			return 'Are you sure you want to close the current Chat?';
+		}
+    }
+    
+    window.onunload = onconvclosed;
+	window.onbeforeunload = confirmExit;
+	window.onload = onPageLoad;
+	
+    </script>
+    
+	<style type="text/css">
+	.atlas__delta { font-family:Lucida Console; }
+
+</style></head>
+<body>
+	<form name="form1" method="post" action="http://192.139.20.2/WebChatASP/default.aspx" id="form1">
+<div>
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwULLTE4NDA1MzY0NDUPZBYCAgMPZBYCAgQPEA9kFgIeCG9uY2hhbmdlBRdyZXR1cm4gQ2hhbmdlU2VydmljZSgpOxAVAyBJbnNpZGUgU2FsZXMgLSBQcm9kdWN0IHNlbGVjdGlvbhFUZWNobmljYWwgU3VwcG9ydCJDdXN0b21lciBTZXJ2aWNlIC0gT3JkZXIgUGxhY2VtZW50FQMgSW5zaWRlIFNhbGVzIC0gUHJvZHVjdCBzZWxlY3Rpb24ZVGVjaG5pY2FsIFN1cHBvcnQgU2VydmljZRBDdXN0b21lciBTZXJ2aWNlFCsDA2dnZ2RkZC92II5Q35f1X4TnkVE4UIYSegNZ">
+</div>
+
+<script type="text/javascript">
+                function KeepSessionAlive(){
+                    var img = new Image(1,1);
+                    img.src = 'SessionReconnect.aspx';
+                }
+                window.setInterval('KeepSessionAlive()',1170000);
+            </script>
+<script src="./CC Elite MultiChannel Web Chat Example_files/WebResource.axd" type="text/javascript"></script>
+<script src="./CC Elite MultiChannel Web Chat Example_files/WebResource(1).axd" type="text/javascript"></script>
+<script src="./CC Elite MultiChannel Web Chat Example_files/atlasglob.axd" type="text/javascript"></script>
+<div>
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="F138CC80">
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="/wEWBwKS98fuDAKIlu7WDQLEhISFCwK5uPvEDQKoosO6BQKluJLeAQLW7d2uCeMC+nDslzFsaz8KUco2LvbQkvgV">
+</div>
+	
+	    <div id="wrap">
+        <div id="header">
+            <a href="http://www.avaya.com/" target="_blank"><img class="logo" src="./CC Elite MultiChannel Web Chat Example_files/Logo.gif" alt="Avaya" border="0" height="34" width="180"></a>
+		    <div id="title" class="chatTitle">Avaya Web Chat</div>
+	    </div>
+	    
+	    <!-- Error Messages -->
+	    <noscript>
+	        &lt;div id="lblNoscriptMessage" class="errordisplay"&gt;           
+	            This page uses Javascript. Your browser either doesn't support Javascript or you have it turned off. To use live support you must have javascript enabled.
+	        &lt;/div&gt;
+	    </noscript>
+	    <div id="lblErrorMessage" class="errordisplay" style="display:none">
+	    </div> 
+
+	    <div id="main">
+            <table width="95%" cellpadding="5">
+                <tbody><tr>
+                    <td rowspan="3" style="width:170px">
+				        <!-- status image -->
+				        <img id="StatusIcon" src="./CC Elite MultiChannel Web Chat Example_files/ChatOnline.jpg" alt="status">
+        	            <br>
+        	            <span id="clock" class="clockline">8/3/2017 3:56:45 PM</span>
+        	            <input type="hidden" name="hdnLocalTime" id="hdnLocalTime" value="3:57 PM">
+					</td>
+                    <td style="width: 120px;text-align:right">
+                        Name:</td>
+                    <td>
+                        <input name="txtName" type="text" id="txtName">
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width: 120px;text-align:right">
+                        Department:
+                    </td>
+                    <td>
+                        <select name="ddlServices" id="ddlServices" onchange="return ChangeService();">
+	<option value="Inside Sales - Product selection">Inside Sales - Product selection</option>
+	<option value="Technical Support Service">Technical Support</option>
+	<option value="Customer Service">Customer Service - Order Placement</option>
+
+</select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width: 120px;text-align:right;vertical-align:top">
+                        <br>
+                       Initial Question: 
+                    </td>
+                    <td>
+                        <textarea name="txtInitialQuestion" rows="2" cols="20" id="txtInitialQuestion"></textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                    </td>
+                    <td>
+            	    	<button type="button" id="StartButton" onclick="CreateConversation()" disabled="">Launch Conversation</button>
+                    </td>
+                </tr>
+            </tbody></table>
+	    </div>
+	    <div id="infobar">
+	    	<span id="ServiceStatus"><span class="statuslabel">Inside Sales - Product selection: </span><span class="statusline">Open</span></span><br>
+	    	<span id="UserMessages" class="usermessageline">
+
+</span><br>
+	    </div>
+	    <div id="footer">
+	        <p>
+            <img src="./CC Elite MultiChannel Web Chat Example_files/PoweredBy.gif" alt="Powered By Avaya">
+            </p>
+	    </div>
+    </div>
+    <div id="debugMessages" class="errormessageline"></div>
+    
+<script type="text/xml-script">
+<page xmlns:script="http://schemas.microsoft.com/xml-script/2005">
+  <components>
+    <pageRequestManager id="_PageRequestManager" updatePanelIDs="" asyncPostbackControlIDs="" scriptManagerID="ScriptManager" form="form1" />
+  </components>
+</page></script>
+<script type="text/javascript">
+var PageMethods = new function() {
+var cm=Sys.Net.PageMethod.createProxyMethod;
+cm(this,"changeService","newServiceID");
+cm(this,"updateStatus");
+cm(this,"startChatSession","serviceID","userName","initialQuestion","ssnData");
+cm(this,"closeSession");
+cm(this,"sendMessage","message");
+cm(this,"sendNotification","notificationCode","user");
+cm(this,"disableClientDebugging");
+}
+
+</script>
+</form>
+
+
+</body></html>

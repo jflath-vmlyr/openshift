@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">This is the GCR Digital CSR, Customer Bob needs tires and you need to call him at 888 555 1212 to schedule.  Again, customer name is Bob and his number is 888 555 1212</Say>
+    <Gather timeout="15" numDigits="1" action="/WaitList/services/PhoneCall/respondToOne" method="POST">
+        <Say>To acknowledge receipt of the customer information, press 1 otherwise we will call back in 2 minutes to retry.</Say>
+    </Gather>
+</Response>
+
