@@ -1,0 +1,34 @@
+NAME                   TYPE      FROM         LATEST
+bc/defaultproject      Source    Git          16
+bc/javascriptproject   Source    Git@master   1
+NAME                         TYPE      FROM          STATUS                        STARTED         DURATION
+builds/defaultproject-1      Source    Git           Failed (GenericBuildFailed)   8 days ago      1h0m25s
+builds/defaultproject-14     Source    Git@e2f7959   Complete                      3 days ago      27s
+builds/defaultproject-15     Source    Git@8aa3861   Complete                      2 days ago      29s
+builds/defaultproject-16     Source    Git@3cc4275   Complete                      5 minutes ago   55s
+builds/javascriptproject-1   Source    Git@7ab3686   Complete                      4 days ago      1m37s
+NAME                   DOCKER REPO                                        TAGS      UPDATED
+is/defaultproject      172.30.148.65:5000/mytomcatapp/defaultproject      latest    4 minutes ago
+is/javascriptproject   172.30.148.65:5000/mytomcatapp/javascriptproject   latest    4 days ago
+NAME                REVISION   DESIRED   CURRENT   TRIGGERED BY
+dc/defaultproject   16         1         1         config,image(defaultproject:latest)
+NAME                   DESIRED   CURRENT   READY     AGE
+rc/defaultproject-13   0         0         0         3d
+rc/defaultproject-14   0         0         0         3d
+rc/defaultproject-15   0         0         0         2d
+rc/defaultproject-16   1         1         1         4m
+rc/defaultproject-8    0         0         0         3d
+NAME                       HOST/PORT                                                                PATH      SERVICES            PORT       TERMINATION   WILDCARD
+routes/defaultproject      defaultproject-mytomcatapp.a3c1.starter-us-west-1.openshiftapps.com                defaultproject      8080-tcp                 None
+routes/javascriptproject   javascriptproject-mytomcatapp.a3c1.starter-us-west-1.openshiftapps.com             javascriptproject   8080-tcp                 None
+routes/www                 www.jimflath.com                                                                   defaultproject      8080-tcp                 None
+NAME                    CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+svc/defaultproject      172.30.190.226   <none>        8080/TCP,8443/TCP,8778/TCP   8d
+svc/javascriptproject   172.30.60.38     <none>        8080/TCP                     3d
+NAME                           READY     STATUS      RESTARTS   AGE
+po/defaultproject-14-build     0/1       Completed   0          3d
+po/defaultproject-15-build     0/1       Completed   0          2d
+po/defaultproject-16-build     0/1       Completed   0          5m
+po/defaultproject-16-q8267     1/1       Running     0          4m
+po/defaultproject-8-deploy     0/1       Error       0          3d
+po/javascriptproject-1-build   0/1       Completed   0          3d
