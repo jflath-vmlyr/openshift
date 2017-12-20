@@ -1,5 +1,6 @@
 
-cd /workspaces/openshift/v3/rootBuild
+cd "/Users/jflath/Google Drive/openshift/v3/rootBuild"
+date > version.html
 jar -cvf ../deployments/ROOT.war *
 cd ..
 git add .
